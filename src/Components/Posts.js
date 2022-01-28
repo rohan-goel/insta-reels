@@ -1,20 +1,20 @@
-import React,{useEffect,useState} from 'react'
-import {useParams} from 'react-router-dom'
-import { database } from '../firebase'
-import { CircularProgress } from '@mui/material';
-import Navbar from './Navbar' 
-import Typography from '@mui/material/Typography';
+import React, { useState,useEffect } from 'react'
+import {database} from '../firebase';
+import CircularProgress from '@mui/material/CircularProgress';
+import Video from './Video'
+import './Posts.css'
+import Avatar from '@mui/material/Avatar';
+import Like from './Like'
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import Dialog from '@mui/material/Dialog';
 import Card from '@mui/material/Card';
+import Typography from '@mui/material/Typography';
 import Like2 from './Like2';
 import AddComment from './AddComment';
 import Comments from './Comments'
-import './Profile.css'
 
-function Profile() {
-    const {id} = useParams()
-    const [userData,setUserdata] = useState(null)
-    const [posts,setPosts] = useState(null)
+function Posts({userData}) {
+    const [posts,setPosts] = useState(null);
     const [open, setOpen] = useState(null);
 
     const handleClickOpen = (id) => {
@@ -25,58 +25,57 @@ function Profile() {
         setOpen(null);
     };
     useEffect(()=>{
-        database.users.doc(id).onSnapshot((snap)=>{
-            setUserdata(snap.data())
+        let parr = []
+        const unsub = database.posts.orderBy('createdAt','desc').onSnapshot((querySnapshot)=>{
+            parr = []
+            querySnapshot.forEach((doc)=>{
+                let data = {...doc.data(),postId:doc.id}
+                parr.push(data)
+            })
+            setPosts(parr)
         })
-    },[id])
-
-    useEffect(() => {
-        async function fn() {
-            if(userData!=null){
-                let parr = [];
-                for(let i=0;i<userData?.postIds?.length;i++){
-                    let postData = await database.posts.doc(userData.postIds[i]).get()
-                    parr.push({...postData.data(),postId:postData.id})
-                } 
-                setPosts(parr)    
-            }        
+        return unsub
+    },[])
+    const callback = (entries) => {
+        entries.forEach((entry)=>{
+            let ele = entry.target.childNodes[0]
+            console.log(ele)
+            ele.play().then(()=>{
+                if(!ele.paused && !entry.isIntersecting){
+                    ele.pause()
+                }
+            })
+        })
+    }
+    let observer = new IntersectionObserver(callback, {threshold:0.6});
+    useEffect(()=>{
+        const elements = document.querySelectorAll(".videos")
+        elements.forEach((element)=>{
+            observer.observe(element)
+        })
+        return ()=>{
+            observer.disconnect();
         }
-        fn()
-        
-    },[userData])
-
+    },[posts])
     return (
-        <>
-        {
-            posts==null || userData==null ? <CircularProgress/> : 
-            <>
-                <Navbar userData={userData}/>
-                <div className="spacer"></div>
-                <div className="container">
-                    <div className="upper-part">
-                        <div className="profile-img">
-                            <img src={userData.profileUrl} alt=''/>
-                        </div>
-                        <div className="info">
-                            <Typography variant="h5">
-                                Email : {userData.email}
-                            </Typography>
-                            <Typography variant="h6">
-                                Posts : {userData?.postIds?.length}
-                            </Typography>
-                        </div>
-                    </div>
-                    <hr style={{marginTop:'3rem',marginBottom:'3rem'}}/>
-                    <div className="profile-videos">
+        <div>
+            {
+                posts==null || userData==null ? <CircularProgress /> :
+                <div className="video-container">
                     {
                         posts.map((post,index)=>(
                             <React.Fragment key={index}>
+                                {console.log(post)}
                                 <div className="videos">
-                                    <video muted="muted" onClick={()=>handleClickOpen(post.pId)}>
-                                        <source src={post.pUrl}/>
-                                    </video>
+                                    <Video src={post.pUrl} id={post.pId}/>
+                                    <div className="fa" style={{display:'flex'}}>
+                                        <Avatar src={post.uProfile} />
+                                        <h4>{post.uName}</h4>
+                                    </div>
+                                    <Like userData={userData} postData={post}/>
+                                    <ChatBubbleIcon className="chat-styling" onClick={()=>handleClickOpen(post.pId)}/>
                                     <Dialog
-                                        open={open===post.pId}
+                                        open={open==post.pId}
                                         onClose={handleClose}
                                         aria-labelledby="alert-dialog-title"
                                         aria-describedby="alert-dialog-description"
@@ -94,7 +93,7 @@ function Profile() {
                                                 <Comments postData={post}/>
                                             </Card>
                                                 <Card variant="outlined" className="card2">
-                                                    <Typography style={{padding:'0.4rem'}}>{post.likes.length===0?'Liked by nobody':`Liked by ${post.likes.length} users`}</Typography>
+                                                    <Typography style={{padding:'0.4rem'}}>{post.likes.length==0?'Liked by nobody':`Liked by ${post.likes.length} users`}</Typography>
                                                     <div style={{display:'flex'}}>
                                                         <Like2 postData={post} userData={userData} style={{display:'flex',alignItems:'center',justifyContent:'center'}}/>
                                                         <AddComment style={{display:'flex',alignItems:'center',justifyContent:'center'}} userData={userData} postData={post}/>
@@ -108,11 +107,9 @@ function Profile() {
                         ))
                     }
                 </div>
-                </div>
-            </>
-        }
-        </>
+            }
+        </div>
     )
 }
 
-export default Profile
+export default Posts

@@ -23,11 +23,12 @@ function Login() {
     try{
         setError('');
         setLoading(true)
-        let res = await login(email,password);
+        await login(email,password);
         setLoading(false);
         history.push('/')
     }catch(err){
-        setError(err);
+      setError(err);
+      console.log(err)
         setTimeout(()=>{
             setError('')
         },2000);
@@ -41,7 +42,7 @@ function Login() {
           <Typography sx={{mx:'auto', width:'100%', textAlign: 'center'}} gutterBottom variant="h5" component="div">
             Instagram
           </Typography>
-          {error!=='' && <Alert severity="error" sx={{ fontSize: 16 }}>{error}</Alert>}
+          {error!='' && <Alert severity="error" sx={{ fontSize: 16 }}>{error}</Alert>}
           <TextField id="outlined-basic" label="Enter Email" variant="outlined" margin="dense" fullWidth='true' size="small" value={email} onChange={(e)=>setEmail(e.target.value)}/>
           <TextField id="outlined-basic" label="Password" margin="dense" variant="outlined" fullWidth='true' size="small" value={password} onChange={(e)=>setPassword(e.target.value)} />
           <Typography color="primary" variant="subtitle1">
